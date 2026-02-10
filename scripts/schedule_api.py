@@ -325,6 +325,35 @@ def get_group_faculty_id(group_id: int) -> int | None:
         return None
 
 
+def get_group_sub_group_ids(group_id: int) -> list[int]:
+    try:
+        normalized_group_id = int(group_id)
+    except (TypeError, ValueError):
+        return []
+
+    groups_tree = get_groups_tree()
+    if not groups_tree:
+        return []
+
+    group_meta = _find_group_meta(groups_tree, normalized_group_id)
+    if not isinstance(group_meta, dict):
+        return []
+
+    raw_sub_groups = group_meta.get("sub_groups") or []
+    if not isinstance(raw_sub_groups, list):
+        return []
+
+    sub_group_ids: list[int] = []
+    for sub_group in raw_sub_groups:
+        raw_id = sub_group.get("id") if isinstance(sub_group, dict) else sub_group
+        try:
+            sub_group_ids.append(int(raw_id))
+        except (TypeError, ValueError):
+            continue
+
+    return sorted(set(sub_group_ids))
+
+
 def get_schedule(group_id: int, start_date: datetime.date, end_date: datetime.date,
                  sub_group_id: int | None = None, exam_only: bool | None = None) -> Any | None:
     params = {

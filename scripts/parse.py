@@ -55,6 +55,25 @@ def _build_non_summer_ranges(start_date: datetime.date, end_date: datetime.date)
     return ranges
 
 
+def _resolve_sub_group_for_request(group: int | str, sub_group: Any) -> int | None:
+    if sub_group in (None, 0, "0"):
+        return None
+
+    try:
+        sub_group_int = int(sub_group)
+    except (TypeError, ValueError):
+        return None
+
+    if sub_group_int in (1, 2):
+        try:
+            group_int = int(group)
+            return int(f"{group_int}{sub_group_int}")
+        except (TypeError, ValueError):
+            return sub_group_int
+
+    return sub_group_int
+
+
 def parse_groups() -> None:
     if schedule_api.refresh_groups_cache():
         logging.info("updated groups successfully")
@@ -148,22 +167,13 @@ async def parse_date_schedule(group, sub_group=None, date_1=None, date_2=None):
 
     url = f"https://guide.herzen.spb.ru/schedule/{group}/by-dates"
 
-    resolved_sub_group = None
-    if sub_group not in (None, 0, "0"):
-        try:
-            sub_group_int = int(sub_group)
-        except (TypeError, ValueError):
-            sub_group_int = None
-
-        if sub_group_int is not None:
-            if sub_group_int in (1, 2):
-                try:
-                    group_int = int(group)
-                    resolved_sub_group = int(f"{group_int}{sub_group_int}")
-                except (TypeError, ValueError):
-                    resolved_sub_group = sub_group_int
-            else:
-                resolved_sub_group = sub_group_int
+    resolved_sub_group = _resolve_sub_group_for_request(group, sub_group)
+    include_all_sub_groups = resolved_sub_group is None
+    all_sub_group_ids = (
+        schedule_api.get_group_sub_group_ids(group)
+        if include_all_sub_groups
+        else []
+    )
 
     date_ranges = _build_non_summer_ranges(date_1, date_2)
     if not date_ranges:
@@ -171,6 +181,34 @@ async def parse_date_schedule(group, sub_group=None, date_1=None, date_2=None):
 
     schedule_items: list[dict[str, Any]] = []
     for start_date, end_date in date_ranges:
+        if include_all_sub_groups and all_sub_group_ids:
+            common_response = schedule_api.get_schedule(group, start_date, end_date)
+            if common_response is None:
+                return None, url
+            if not isinstance(common_response, list):
+                logging.error("unexpected schedule response for group %s: %s", group, type(common_response))
+                return None, url
+
+            for sub_group_id in all_sub_group_ids:
+                resolved_sub_group_id = _resolve_sub_group_for_request(group, sub_group_id)
+                if resolved_sub_group_id is None:
+                    continue
+                sub_group_response = schedule_api.get_schedule(
+                    group,
+                    start_date,
+                    end_date,
+                    sub_group_id=resolved_sub_group_id,
+                )
+                if sub_group_response is None:
+                    return None, url
+                if not isinstance(sub_group_response, list):
+                    logging.error("unexpected schedule response for group %s: %s", group, type(sub_group_response))
+                    return None, url
+                schedule_items.extend(sub_group_response)
+
+            schedule_items.extend(common_response)
+            continue
+
         schedule_response = schedule_api.get_schedule(group, start_date, end_date, sub_group_id=resolved_sub_group)
         if schedule_response is None:
             return None, url

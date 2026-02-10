@@ -7,7 +7,7 @@ from typing import List, Callable
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram import exceptions
 
-from scripts import keyboards
+from scripts import keyboards, schedule_api
 from scripts.bot import db, bot
 from scripts.parse import parse_date_schedule
 from scripts.utils import validate_user, seconds_before_iso_time, generate_schedule_message, today_for_group
@@ -51,14 +51,26 @@ def _split_text_into_chunks(text: str, max_len: int) -> List[str]:
     return [chunk for chunk in chunks if chunk]
 
 
-def _build_schedule_messages(header: str, period: str, schedule_text: str, reminder: str) -> List[str]:
+def _build_schedule_intro(header: str, period: str, warning: str = "") -> str:
+    intro_parts: List[str] = []
+    if header:
+        intro_parts.append(header)
+    if warning:
+        intro_parts.append(warning.strip())
+    intro_parts.append(f"Вот твое расписание на {period}:")
+    return "\n\n".join(intro_parts)
+
+
+def _build_schedule_messages(header: str, period: str, schedule_text: str, reminder: str,
+                             warning: str = "") -> List[str]:
     body_chunks = _split_text_into_chunks(schedule_text, SCHEDULE_CHUNK_BODY_LEN)
     total_parts = len(body_chunks)
 
     messages = []
     for index, chunk in enumerate(body_chunks, start=1):
         if index == 1:
-            text = f"{header}\n\nВот твое расписание на {period}:\n{chunk}"
+            intro = _build_schedule_intro(header, period, warning=warning)
+            text = f"{intro}\n{chunk}"
         else:
             text = f"<i>Продолжение расписания ({index}/{total_parts})</i>\n{chunk}"
         messages.append(text)
@@ -70,6 +82,26 @@ def _build_schedule_messages(header: str, period: str, schedule_text: str, remin
             messages.append(reminder)
 
     return messages
+
+
+def _build_sub_group_warning(user_id: int) -> str:
+    user_data = db.get_user(user_id)
+    if not user_data:
+        return ""
+
+    group_id, sub_group = user_data
+    if sub_group not in (None, 0, "0"):
+        return ""
+
+    sub_group_ids = schedule_api.get_group_sub_group_ids(group_id)
+    if not sub_group_ids:
+        return ""
+
+    return (
+        "<b>⚠ Подгруппа не выбрана.</b>\n"
+        "Показываю расписание для всех подгрупп. "
+        "Чтобы видеть только свое, выбери подгруппу в настройках."
+    )
 
 
 async def handle_broadcast_exceptions(user_id: int, e: exceptions.TelegramAPIError, retry_callback: Callable):
@@ -128,10 +160,16 @@ async def send_date_schedule(
         else:
             period = "следующей неделе"
 
+    sub_group_warning = _build_sub_group_warning(user_id)
+
     if not schedule:
-        await bot.send_message(user_id, f"{header}\n\n"
-                                           f"🎉 На {period} занятий нет, можно отдыхать.\n"
-                                           f"{reminder}",
+        empty_intro_parts = [part for part in [header, sub_group_warning] if part]
+        empty_intro = "\n\n".join(empty_intro_parts)
+        empty_text = f"🎉 На {period} занятий нет, можно отдыхать.\n{reminder}"
+        if empty_intro:
+            empty_text = f"{empty_intro}\n\n{empty_text}"
+
+        await bot.send_message(user_id, empty_text,
                                   reply_markup=reply_markup)
         await asyncio.sleep(0.5)
         await bot.send_sticker(user_id, await get_random_chill_sticker())
@@ -144,7 +182,8 @@ async def send_date_schedule(
             period = "следующую неделю"
 
     msg_text = await generate_schedule_message(schedule)
-    full_message = f"{header}\n\nВот твое расписание на {period}:\n{msg_text}{reminder}"
+    intro = _build_schedule_intro(header, period, warning=sub_group_warning)
+    full_message = f"{intro}\n{msg_text}{reminder}"
 
     if len(full_message) <= TELEGRAM_MESSAGE_MAX_LEN:
         await bot.send_message(user_id, full_message, reply_markup=reply_markup)
@@ -155,6 +194,7 @@ async def send_date_schedule(
         period=period,
         schedule_text=msg_text,
         reminder=reminder,
+        warning=sub_group_warning,
     )
     logging.info("schedule message split into %s parts for user %s", len(split_messages), user_id)
 
