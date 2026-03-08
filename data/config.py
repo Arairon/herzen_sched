@@ -1,35 +1,36 @@
 import os
 from pathlib import Path
 
+DEBUG = os.environ.get("DEBUG", False)
 
 # Telegram data
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-ADMIN_TELEGRAM_ID = int(os.environ.get('ADMIN_TELEGRAM_ID', '123456789'))
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+ADMIN_TELEGRAM_ID = int(os.environ.get("ADMIN_TELEGRAM_ID", "123456789"))
 
 
 # Webhook data
-WEBHOOK_HOST = os.environ.get('WEBHOOK_HOST')
-WEBHOOK_PATH = f'/{TELEGRAM_TOKEN}'
-WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
+WEBHOOK_HOST = os.environ.get("WEBHOOK_HOST")
+WEBHOOK_PATH = f"/{TELEGRAM_TOKEN}"
+WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 
-WEBAPP_HOST = os.environ.get('WEBAPP_HOST', '0.0.0.0')
-WEBAPP_PORT = int(os.environ.get('WEBAPP_PORT', '5000'))
+WEBAPP_HOST = os.environ.get("WEBAPP_HOST", "0.0.0.0")
+WEBAPP_PORT = int(os.environ.get("WEBAPP_PORT", "5000"))
 
 # for self-signed certificates
-PUBLIC_KEY_PATH = os.environ.get('PUBLIC_KEY_PATH')
+PUBLIC_KEY_PATH = os.environ.get("PUBLIC_KEY_PATH")
 if PUBLIC_KEY_PATH:
     PUBLIC_KEY_PATH = Path(PUBLIC_KEY_PATH)
 
 
 # Donate urls
-DONATE_URL = os.environ.get('DONATE_URL', r'https://pay.cloudtips.ru/p/0a19cb8e')
-SUBSCRIBE_URL = os.environ.get('SUBSCRIBE_URL', r'https://boosty.to/dant4ick')
+DONATE_URL = os.environ.get("DONATE_URL", r"https://pay.cloudtips.ru/p/0a19cb8e")
+SUBSCRIBE_URL = os.environ.get("SUBSCRIBE_URL", r"https://boosty.to/dant4ick")
 
 # Timezone configuration
-TIMEZONE = os.environ.get('TIMEZONE', 'Europe/Moscow')
+TIMEZONE = os.environ.get("TIMEZONE", "Europe/Moscow")
 
 # Redis cache
-REDIS_URL = os.environ.get('REDIS_URL')
+REDIS_URL = os.environ.get("REDIS_URL")
 
 # Path to run.py dir
 BASE_DIR = Path(__file__).parent.parent

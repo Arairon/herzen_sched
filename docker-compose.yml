@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 services:
   redis:
     image: redis:7-alpine
@@ -6,7 +6,7 @@ services:
     restart: always
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - ./dockerdata/redis:/data
+      - ./dockerdata/redis:/data:z
 
   bot:
     build:
@@ -19,8 +19,10 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
     volumes:
-      - ./dockerdata:/app/storage
+      - ./dockerdata:/app/storage:z
     ports:
-      - "5000:5000"
+      - "3233:5000"
     # Use the default command from Dockerfile or make debug configurable via environment variable
-    command: ["python", "run.py", "--debug"]
+    command: ["python", "run.py"]
+    depends_on:
+      - redis
