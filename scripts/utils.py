@@ -17,8 +17,9 @@ year_pattern = r"(\.(\d{4}))"
 date_pattern = r"({0}{1}({2})?)".format(day_pattern, month_pattern, year_pattern)
 date_range_pattern = r"({0}\-{1})".format(date_pattern, date_pattern)
 
+
 def get_dates_regexp() -> str:
-    
+
     return r"((\A|\s|\b)({r}|{d})(\Z|\s))".format(r=date_range_pattern, d=date_pattern)
 
 
@@ -86,12 +87,12 @@ def find_group_info(groups, group_id, sub_group_id=None):
 
 
 async def generate_kb_nums(source):
-    msg_text = ''
+    msg_text = ""
     counter = 1
     builder = InlineKeyboardBuilder()
     for data in source.keys():
         msg_text += f"{counter}. {data[0].upper() + data[1:]}\n"
-        builder.button(text=f'{counter}', callback_data=NumCallback(num=counter).pack())
+        builder.button(text=f"{counter}", callback_data=NumCallback(num=counter).pack())
         counter += 1
     # builder.adjust(8)
     builder.row(keyboards.inline_bt_cancel)
@@ -99,20 +100,21 @@ async def generate_kb_nums(source):
 
 
 async def generate_schedule_message(schedule):
-    msg_text = ''
+    msg_text = ""
+
     for day in schedule:
         msg_text += f"\n🗓{day}\n"
         for course in schedule[day]:
-            time = course['time']
-            mod = course['mod']
+            time = course["time"]
+            mod = course["mod"]
             if mod:
                 mod = "ℹ " + mod
-            name = course['name']
-            type = course['type']
-            teacher = course['teacher']
-            room = course['room']
-            class_url = course.get('class_url')
-            teacher_url = course.get('teacher_url')
+            name = course["name"]
+            type = course["type"]
+            teacher = course["teacher"]
+            room = course["room"]
+            # class_url = course.get('class_url')
+            # teacher_url = course.get('teacher_url')
 
             type_label = (type or "").strip()
             if type_label:
@@ -145,21 +147,21 @@ async def generate_schedule_message(schedule):
 
             title = name or ""
             if type_label:
-                title = f"{title} [{type_label}]" if title else f"[{type_label}]"
+                title = f"<b>{title}</b> [{type_label}]" if title else f"[{type_label}]"
 
             time_line = f"⏰ {time}"
             if mod:
                 time_line += f" <i>{mod}</i>"
 
-            if class_url:
-                time_line += f" <a href=\"{class_url}\">🔗 (курс)</a>"
+            # if class_url:
+            #     time_line += f" <a href=\"{class_url}\">🔗 (курс)</a>"
 
             msg_text += f"\n{time_line}\n{title}"
 
             if teacher:
                 teacher_line = teacher.strip()
-                if teacher_url:
-                    teacher_line = f"{teacher_line} <a href=\"{teacher_url}\">🔗 (профиль)</a>"
+                # if teacher_url:
+                #     teacher_line = f"{teacher_line} <a href=\"{teacher_url}\">🔗 (профиль)</a>"
                 msg_text += f"\n{teacher_line}"
             if room:
                 msg_text += f"\n{room.strip()}"
@@ -196,9 +198,12 @@ async def validate_user(user_id: int):
     groups_list = extract_group_numbers(groups_dict)
 
     if not user_data or str(user_data[0]) not in groups_list:
-        await bot.send_message(user_id, f"Кажется, я не знаю, где ты учишься.\n"
-                                        f"Нажми на кнопку <b>{keyboards.bt_group_config.text}</b>, чтобы я мог вывести твое расписание.",
-                                  reply_markup=keyboards.kb_settings)
+        await bot.send_message(
+            user_id,
+            f"Кажется, я не знаю, где ты учишься.\n"
+            f"Нажми на кнопку <b>{keyboards.bt_group_config.text}</b>, чтобы я мог вывести твое расписание.",
+            reply_markup=keyboards.kb_settings,
+        )
         return False
     return True
 
@@ -220,5 +225,5 @@ async def seconds_before_iso_time(wait_before: str):
 
 async def notify_admins(message: str):
     msg_text = f"📢 <b>Внимание!</b>\n\n{message}"
-    
-    await bot.send_message(ADMIN_TELEGRAM_ID, msg_text, parse_mode='HTML')
+
+    await bot.send_message(ADMIN_TELEGRAM_ID, msg_text, parse_mode="HTML")

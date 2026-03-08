@@ -17,6 +17,7 @@ WEEKDAYS_RU = [
     "воскресенье",
 ]
 
+
 def _parse_iso_datetime(value: str | None, default_tz: datetime.tzinfo) -> datetime.datetime | None:
     if not value:
         return None
@@ -39,7 +40,9 @@ def _format_day_label(date_value: datetime.date) -> str:
     return f"{day}.{month}.{date_value.year}, {weekday}"
 
 
-def _build_non_summer_ranges(start_date: datetime.date, end_date: datetime.date) -> list[tuple[datetime.date, datetime.date]]:
+def _build_non_summer_ranges(
+    start_date: datetime.date, end_date: datetime.date
+) -> list[tuple[datetime.date, datetime.date]]:
     summer_start = datetime.date(start_date.year, 6, 1)
     summer_end = datetime.date(start_date.year, 8, 31)
 
@@ -81,10 +84,15 @@ def parse_groups() -> None:
         logging.info("can't update groups list: api response is invalid")
 
 
-def _build_schedule(items: list[dict[str, Any]], teachers: dict[int, dict[str, Any]],
-                    rooms: dict[int, dict[str, Any]], buildings: dict[int, dict[str, Any]],
-                    target_tz: datetime.tzinfo) -> dict[str, list[dict[str, str]]]:
+def _build_schedule(
+    items: list[dict[str, Any]],
+    teachers: dict[int, dict[str, Any]],
+    rooms: dict[int, dict[str, Any]],
+    buildings: dict[int, dict[str, Any]],
+    target_tz: datetime.tzinfo,
+) -> dict[str, list[dict[str, str]]]:
     schedule: dict[str, list[dict[str, str]]] = {}
+    schedule_hashes: dict[str, list[str]] = {}
 
     def format_rank(rank: str) -> str:
         rank = (rank or "").strip()
@@ -147,16 +155,21 @@ def _build_schedule(items: list[dict[str, Any]], teachers: dict[int, dict[str, A
             elif building_name:
                 room_name = building_name
 
-        schedule.setdefault(day_label, []).append({
+        obj = {
             "time": time_text,
-            "mod": item.get("note") or "",
-            "name": item.get("name") or "",
-            "type": item.get("type") or "",
+            "mod": item.get("note", ""),
+            "name": item.get("name", ""),
+            "type": item.get("type", ""),
             "teacher": teacher_name,
             "teacher_url": teacher_url,
             "room": room_name,
-            "class_url": item.get("class_url") or "",
-        })
+            "class_url": item.get("class_url", ""),
+        }
+        objHash = hash(frozenset(obj.items()))
+        if day_label in schedule_hashes and objHash in schedule_hashes[day_label]:
+            continue
+        schedule.setdefault(day_label, []).append(obj)
+        schedule_hashes.setdefault(day_label, []).append(objHash)
 
     return schedule
 
@@ -165,15 +178,12 @@ async def parse_date_schedule(group, sub_group=None, date_1=None, date_2=None):
     if date_1 and not date_2:
         date_2 = date_1
 
-    url = f"https://guide.herzen.spb.ru/schedule/{group}/by-dates"
+    # url = f"https://guide.herzen.spb.ru/schedule/{group}/by-dates"
+    url = f"https://old-guide.herzen.spb.ru/static/schedule_dates.php?id_group={group}&date1={date_1.strftime('%Y-%m-%d')}date2={date_2.strftime('%Y-%m-%d')}"
 
     resolved_sub_group = _resolve_sub_group_for_request(group, sub_group)
     include_all_sub_groups = resolved_sub_group is None
-    all_sub_group_ids = (
-        schedule_api.get_group_sub_group_ids(group)
-        if include_all_sub_groups
-        else []
-    )
+    all_sub_group_ids = schedule_api.get_group_sub_group_ids(group) if include_all_sub_groups else []
 
     date_ranges = _build_non_summer_ranges(date_1, date_2)
     if not date_ranges:
@@ -189,22 +199,22 @@ async def parse_date_schedule(group, sub_group=None, date_1=None, date_2=None):
                 logging.error("unexpected schedule response for group %s: %s", group, type(common_response))
                 return None, url
 
-            for sub_group_id in all_sub_group_ids:
-                resolved_sub_group_id = _resolve_sub_group_for_request(group, sub_group_id)
-                if resolved_sub_group_id is None:
-                    continue
-                sub_group_response = schedule_api.get_schedule(
-                    group,
-                    start_date,
-                    end_date,
-                    sub_group_id=resolved_sub_group_id,
-                )
-                if sub_group_response is None:
-                    return None, url
-                if not isinstance(sub_group_response, list):
-                    logging.error("unexpected schedule response for group %s: %s", group, type(sub_group_response))
-                    return None, url
-                schedule_items.extend(sub_group_response)
+            # for sub_group_id in all_sub_group_ids:
+            #     resolved_sub_group_id = _resolve_sub_group_for_request(group, sub_group_id)
+            #     if resolved_sub_group_id is None:
+            #         continue
+            #     sub_group_response = schedule_api.get_schedule(
+            #         group,
+            #         start_date,
+            #         end_date,
+            #         sub_group_id=resolved_sub_group_id,
+            #     )
+            #     if sub_group_response is None:
+            #         return None, url
+            #     if not isinstance(sub_group_response, list):
+            #         logging.error("unexpected schedule response for group %s: %s", group, type(sub_group_response))
+            #         return None, url
+            #     schedule_items.extend(sub_group_response)
 
             schedule_items.extend(common_response)
             continue

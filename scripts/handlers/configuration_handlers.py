@@ -10,7 +10,7 @@ from scripts.utils import *
 from scripts import keyboards
 
 
-@dp.callback_query(F.data == 'cancel')
+@dp.callback_query(F.data == "cancel")
 async def cancel_process_cb(call: types.CallbackQuery, state: FSMContext):
     await state.clear()
     await call.message.reply("Хорошо, забыли.")
@@ -70,33 +70,42 @@ async def configure_mailing(msg: types.Message, state: FSMContext):
         await cancel_mailing(msg, state)
         return
 
-    await msg.answer("🔔 Хочешь подписаться на <b>рассылку</b> расписания?\n\n"
-                     "Каждый день бот будет начинать рассылать <b>расписание на завтрашний день в 18:00 по МСК</b>.\n"
-                     "Рассылка может занять некоторое время, обычно около получаса. "
-                     "Ты в любой момент сможешь как отписаться, так и подписаться снова.",
-                     reply_markup=InlineKeyboardMarkup(inline_keyboard=[[keyboards.inline_bt_confirm], [keyboards.inline_bt_cancel]]))
+    await msg.answer(
+        "🔔 Хочешь подписаться на <b>рассылку</b> расписания?\n\n"
+        "Каждый день бот будет начинать рассылать <b>расписание на завтрашний день в 18:00 по МСК</b>.\n"
+        "Рассылка может занять некоторое время, обычно около получаса. "
+        "Ты в любой момент сможешь как отписаться, так и подписаться снова.",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[keyboards.inline_bt_confirm], [keyboards.inline_bt_cancel]]
+        ),
+    )
     await state.set_state(states.Mailing.Subscribe)
 
 
 @dp.callback_query(states.Mailing.Subscribe)
 async def set_mailing(call: types.CallbackQuery, state: FSMContext):
-    db.set_mailing_time(call.from_user.id, '18:00')
+    db.set_mailing_time(call.from_user.id, "18:00")
     await state.clear()
     await call.answer()
 
     logging.info(f"subscribed to mailing - id: {call.from_user.id}, username: @{call.from_user.username}")
 
     await call.message.edit_text(
-        "🤖 Хорошо, в следующий раз, когда буду рассылать расписание (18:00 по МСК), обязательно напишу и тебе!")
+        "🤖 Хорошо, в следующий раз, когда буду рассылать расписание (18:00 по МСК), обязательно напишу и тебе!"
+    )
 
 
 async def cancel_mailing(msg: types.Message, state: FSMContext):
-    await msg.answer("🔕 Хочешь отписаться от <b>рассылки</b> расписания?\n\n"
-                     "Рассылка <b>может занять некоторое время</b>, обычно около получаса. "
-                     "Если ждать уже надоело и думаешь, что что-то пошло не так, можешь написать админу, "
-                     "ссылка есть в описании бота.\n"
-                     "Ты в любой момент сможешь как подписаться, так и отписаться снова.",
-                     reply_markup=InlineKeyboardMarkup(inline_keyboard=[[keyboards.inline_bt_confirm], [keyboards.inline_bt_cancel]]))
+    await msg.answer(
+        "🔕 Хочешь отписаться от <b>рассылки</b> расписания?\n\n"
+        "Рассылка <b>может занять некоторое время</b>, обычно около получаса. "
+        "Если ждать уже надоело и думаешь, что что-то пошло не так, можешь написать админу, "
+        "ссылка есть в описании бота.\n"
+        "Ты в любой момент сможешь как подписаться, так и отписаться снова.",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[keyboards.inline_bt_confirm], [keyboards.inline_bt_cancel]]
+        ),
+    )
     await state.set_state(states.Mailing.Unsubscribe)
 
 
@@ -107,14 +116,13 @@ async def stop_mailing(call: types.CallbackQuery, state: FSMContext):
 
     logging.info(f"unsubscribed from mailing - id: {call.from_user.id}, username: @{call.from_user.username}")
 
-    await call.message.edit_text(
-        "🤖 Хорошо, больше не буду автоматически присылать тебе расписание на завтра.")
+    await call.message.edit_text("🤖 Хорошо, больше не буду автоматически присылать тебе расписание на завтра.")
 
 
 @dp.callback_query(states.Mailing.Unsubscribe)
 async def stop_mailing_from_config(call: types.CallbackQuery, state: FSMContext):
     await stop_mailing(call, state)
-    
+
 
 @dp.callback_query(F.data == keyboards.inline_bt_unsub.callback_data)
 async def stop_mailing_from_message(call: types.CallbackQuery, state: FSMContext):
@@ -129,9 +137,10 @@ async def start_group_config(msg: types.Message, state: FSMContext):
 
     msg_text, inline_kb_numbers = await generate_kb_nums(groups)
 
-    await msg.answer(f"<b>На клавиатуре ниже выберите цифру, соответствующую вашему факультету:</b>\n\n"
-                     f"{msg_text}",
-                     reply_markup=inline_kb_numbers)
+    await msg.answer(
+        f"<b>На клавиатуре ниже выберите цифру, соответствующую вашему факультету:</b>\n\n" f"{msg_text}",
+        reply_markup=inline_kb_numbers,
+    )
     await state.set_state(states.UserData.Faculty)
 
 
@@ -148,11 +157,10 @@ async def set_faculty(call: CallbackQuery, callback_data: NumCallback, state: FS
 
     msg_text, inline_kb_numbers = await generate_kb_nums(forms)
 
-    await call.message.edit_text(f"<b>На клавиатуре ниже выберите цифру, "
-                                 f"соответствующую вашей форме обучения:</b>\n\n"
-                                 f"{msg_text}",
-                                 reply_markup=inline_kb_numbers
-                                 )
+    await call.message.edit_text(
+        f"<b>На клавиатуре ниже выберите цифру, " f"соответствующую вашей форме обучения:</b>\n\n" f"{msg_text}",
+        reply_markup=inline_kb_numbers,
+    )
     await state.set_state(states.UserData.Form)
 
 
@@ -163,7 +171,7 @@ async def set_form(call: CallbackQuery, callback_data: NumCallback, state: FSMCo
     groups = await open_groups_file()
 
     data = await state.get_data()
-    faculty_name = data['faculty']
+    faculty_name = data["faculty"]
     form_name = list(groups[faculty_name].keys())[callback_data.num - 1]
     await state.update_data(form=form_name)
 
@@ -173,11 +181,10 @@ async def set_form(call: CallbackQuery, callback_data: NumCallback, state: FSMCo
 
     msg_text, inline_kb_numbers = await generate_kb_nums(steps)
 
-    await call.message.edit_text(f"<b>На клавиатуре ниже выберите цифру, "
-                                 f"соответствующую вашей ступени обучения:</b>\n\n"
-                                 f"{msg_text}",
-                                 reply_markup=inline_kb_numbers
-                                 )
+    await call.message.edit_text(
+        f"<b>На клавиатуре ниже выберите цифру, " f"соответствующую вашей ступени обучения:</b>\n\n" f"{msg_text}",
+        reply_markup=inline_kb_numbers,
+    )
     await state.set_state(states.UserData.Step)
 
 
@@ -186,10 +193,10 @@ async def set_step(call: CallbackQuery, callback_data: NumCallback, state: FSMCo
     await call.answer()
 
     groups = await open_groups_file()
-    
+
     data = await state.get_data()
-    faculty_name = data['faculty']
-    form_name = data['form']
+    faculty_name = data["faculty"]
+    form_name = data["form"]
     step_name = list(groups[faculty_name][form_name].keys())[callback_data.num - 1]
     await state.update_data(step=step_name)
 
@@ -199,11 +206,10 @@ async def set_step(call: CallbackQuery, callback_data: NumCallback, state: FSMCo
 
     msg_text, inline_kb_numbers = await generate_kb_nums(courses)
 
-    await call.message.edit_text(f"<b>На клавиатуре ниже выберите цифру, "
-                                 f"соответствующую вашему году обучения:</b>\n\n"
-                                 f"{msg_text}",
-                                 reply_markup=inline_kb_numbers
-                                 )
+    await call.message.edit_text(
+        f"<b>На клавиатуре ниже выберите цифру, " f"соответствующую вашему году обучения:</b>\n\n" f"{msg_text}",
+        reply_markup=inline_kb_numbers,
+    )
     await state.set_state(states.UserData.Course)
 
 
@@ -212,11 +218,11 @@ async def set_course(call: CallbackQuery, callback_data: NumCallback, state: FSM
     await call.answer()
 
     groups = await open_groups_file()
-    
+
     data = await state.get_data()
-    faculty_name = data['faculty']
-    form_name = data['form']
-    step_name = data['step']
+    faculty_name = data["faculty"]
+    form_name = data["form"]
+    step_name = data["step"]
     course_name = list(groups[faculty_name][form_name][step_name].keys())[callback_data.num - 1]
     await state.update_data(course=course_name)
 
@@ -226,11 +232,10 @@ async def set_course(call: CallbackQuery, callback_data: NumCallback, state: FSM
 
     msg_text, inline_kb_numbers = await generate_kb_nums(groups)
 
-    await call.message.edit_text(f"<b>На клавиатуре ниже выберите цифру, "
-                                 f"соответствующую вашей группе:</b>\n\n"
-                                 f"{msg_text}",
-                                 reply_markup=inline_kb_numbers
-                                 )
+    await call.message.edit_text(
+        f"<b>На клавиатуре ниже выберите цифру, " f"соответствующую вашей группе:</b>\n\n" f"{msg_text}",
+        reply_markup=inline_kb_numbers,
+    )
     await state.set_state(states.UserData.Group)
 
 
@@ -239,12 +244,12 @@ async def set_group(call: CallbackQuery, callback_data: NumCallback, state: FSMC
     await call.answer()
 
     groups = await open_groups_file()
-    
+
     data = await state.get_data()
-    faculty_name = data['faculty']
-    form_name = data['form']
-    step_name = data['step']
-    course_name = data['course']
+    faculty_name = data["faculty"]
+    form_name = data["form"]
+    step_name = data["step"]
+    course_name = data["course"]
     group_name = list(groups[faculty_name][form_name][step_name][course_name].keys())[callback_data.num - 1]
     group_meta = groups[faculty_name][form_name][step_name][course_name][group_name]
     sub_groups = []
@@ -259,20 +264,21 @@ async def set_group(call: CallbackQuery, callback_data: NumCallback, state: FSMC
 
     if sub_groups:
         builder = InlineKeyboardBuilder()
+        builder.row(InlineKeyboardButton(text="Без подгрупп", callback_data=NumCallback(num=0).pack()))
         for idx, sub_group in enumerate(sub_groups, start=1):
             label = sub_group.get("name") or str(idx)
             builder.row(InlineKeyboardButton(text=label, callback_data=NumCallback(num=idx).pack()))
         builder.row(keyboards.inline_bt_cancel)
 
-        await call.message.edit_text("Выберите <b>подгруппу</b>.",
-                                     reply_markup=builder.as_markup())
+        await call.message.edit_text("Выберите <b>подгруппу</b>.", reply_markup=builder.as_markup())
         await state.set_state(states.UserData.SubGroup)
         return
 
     db.add_user(call.from_user.id, group_id, 0)
 
-    await call.message.edit_text("<b>Хорошо, все готово!</b>\n"
-                                 "Теперь можешь использовать кнопки, чтобы смотреть расписание!")
+    await call.message.edit_text(
+        "<b>Хорошо, все готово!</b>\nТеперь можешь использовать кнопки, чтобы смотреть расписание!"
+    )
     await state.clear()
     logging.info(f"add: {call.from_user.id} (@{call.from_user.username})")
     await basic_handlers.get_help(call.message)
@@ -283,7 +289,7 @@ async def set_subgroup(call: CallbackQuery, callback_data: NumCallback, state: F
     await call.answer()
 
     data = await state.get_data()
-    group_id = data['group_id']
+    group_id = data["group_id"]
     sub_groups = data.get("sub_groups") or []
     sub_group = int(callback_data.num)
 
@@ -294,27 +300,28 @@ async def set_subgroup(call: CallbackQuery, callback_data: NumCallback, state: F
     elif sub_groups:
         index = sub_group - 1
         if index not in range(len(sub_groups)):
-            logging.info(
-                f"fail: {call.from_user.id} (@{call.from_user.username})")
-            await call.message.edit_text("<b>Упс! Что-то пошло не так, пока мы устанавливали подгруппу...</b>\n"
-                                         "Придется настроить заново 😓")
+            logging.info(f"fail: {call.from_user.id} (@{call.from_user.username})")
+            await call.message.edit_text(
+                "<b>Упс! Что-то пошло не так, пока мы устанавливали подгруппу...</b>\nПридется настроить заново 😓"
+            )
             await state.clear()
             return
         sub_group_id = sub_groups[index].get("id")
     else:
         if sub_group not in range(3):
-            logging.info(
-                f"fail: {call.from_user.id} (@{call.from_user.username})")
-            await call.message.edit_text("<b>Упс! Что-то пошло не так, пока мы устанавливали подгруппу...</b>\n"
-                                         "Придется настроить заново 😓")
+            logging.info(f"fail: {call.from_user.id} (@{call.from_user.username})")
+            await call.message.edit_text(
+                "<b>Упс! Что-то пошло не так, пока мы устанавливали подгруппу...</b>\nПридется настроить заново 😓"
+            )
             await state.clear()
             return
         sub_group_id = sub_group
 
     db.add_user(call.from_user.id, group_id, sub_group_id)
 
-    await call.message.edit_text("<b>Хорошо, все готово!</b>\n"
-                                 "Теперь можешь использовать кнопки, чтобы смотреть расписание!")
+    await call.message.edit_text(
+        "<b>Хорошо, все готово!</b>\nТеперь можешь использовать кнопки, чтобы смотреть расписание!"
+    )
     await state.clear()
     logging.info(f"add: {call.from_user.id} (@{call.from_user.username})")
     await basic_handlers.get_help(call.message)
