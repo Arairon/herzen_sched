@@ -1,3 +1,4 @@
+import re
 import logging
 from datetime import datetime, timedelta, time, date
 
@@ -10,6 +11,8 @@ from scripts import keyboards
 from scripts.bot import db, dp, bot
 from scripts import schedule_api
 from scripts.timezone import tz_now, tzinfo_for_faculty
+
+import scripts.customization as customization
 
 day_pattern = r"(\b((0[1-9])|([1-2]\d)|(3[0-1])|([1-9])))"
 month_pattern = r"(\.((0[1-9])|(1[0-2])|([1-9]))\b)"
@@ -107,8 +110,6 @@ async def generate_schedule_message(schedule):
         for course in schedule[day]:
             time = course["time"]
             mod = course["mod"]
-            if mod:
-                mod = "ℹ " + mod
             name = course["name"]
             type = course["type"]
             teacher = course["teacher"]
@@ -150,12 +151,26 @@ async def generate_schedule_message(schedule):
                 title = f"<b>{title}</b> [{type_label}]" if title else f"[{type_label}]"
 
             time_line = f"⏰ {time}"
+
             if mod:
-                time_line += f" <i>{mod}</i>"
+                if re.fullmatch(r"\(\d?\d:\d\d-\d?\d:\d\d\)", mod.strip()):
+                    time_line = f"⏰ <i>{mod[1:-1]}</i>"
+                else:
+                    time_line += f" <i>ℹ {mod}</i>"
+
+            # Hardcoded customization, since this fork is mostly for personal use.
+            if (mod and (mod.strip().lower()) in customization.DISABLED_MODS) or (
+                name and name.strip().lower() in customization.DISABLED_LESSONS
+            ):
+                continue
+
+            if mod:
+                print(f"Mod for {name}: '{mod}'")
 
             # if class_url:
             #     time_line += f" <a href=\"{class_url}\">🔗 (курс)</a>"
 
+            # Actual output:
             msg_text += f"\n{time_line}\n{title}"
 
             if teacher:
