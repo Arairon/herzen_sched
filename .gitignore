@@ -152,3 +152,7 @@ dockerdata/
 
 ### Database
 data/user_data.db
+
+
+logs/
+storage

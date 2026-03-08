@@ -1,5 +1,8 @@
 import os
 from pathlib import Path
+import dotenv
+
+dotenv.load_dotenv()
 
 DEBUG = os.environ.get("DEBUG", False)
 
@@ -33,4 +36,4 @@ TIMEZONE = os.environ.get("TIMEZONE", "Europe/Moscow")
 REDIS_URL = os.environ.get("REDIS_URL")
 
 # Path to run.py dir
-BASE_DIR = Path(__file__).parent.parent
+BASE_DIR = Path(os.environ.get("BASE_DIR", Path(__file__).parent.parent))

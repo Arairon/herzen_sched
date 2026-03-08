@@ -8,15 +8,15 @@ from redis import Redis
 
 from data.config import REDIS_URL
 
-API_BASE_URL = 'https://api.herzen.spb.ru/schedule/v1'
+API_BASE_URL = "https://api.herzen.spb.ru/schedule/v1"
 
-SCHEDULE_URL = f'{API_BASE_URL}/schedule'
-GROUPS_URL = f'{API_BASE_URL}/groups'
-SUB_GROUPS_URL = f'{API_BASE_URL}/sub_groups'
-TEACHERS_URL = f'{API_BASE_URL}/teachers'
-FACULTIES_URL = f'{API_BASE_URL}/faculties'
-ROOMS_URL = f'{API_BASE_URL}/rooms'
-BUILDINGS_URL = f'{API_BASE_URL}/buildings'
+SCHEDULE_URL = f"{API_BASE_URL}/schedule"
+GROUPS_URL = f"{API_BASE_URL}/groups"
+SUB_GROUPS_URL = f"{API_BASE_URL}/sub_groups"
+TEACHERS_URL = f"{API_BASE_URL}/teachers"
+FACULTIES_URL = f"{API_BASE_URL}/faculties"
+ROOMS_URL = f"{API_BASE_URL}/rooms"
+BUILDINGS_URL = f"{API_BASE_URL}/buildings"
 
 REQUEST_TIMEOUT = 10
 
@@ -55,6 +55,7 @@ def _get_redis() -> Redis | None:
         logging.warning("Redis is unavailable: %s", exc)
         _redis_disabled = True
         return None
+
 
 def request_json(url: str, params: dict | None = None, context: str = "request") -> Any | None:
     try:
@@ -156,15 +157,22 @@ def _cache_set_many(prefix: str, items: Iterable[dict[str, Any]], ttl: datetime.
     except Exception as exc:
         logging.warning("Failed to write cache %s: %s", prefix, exc)
 
-def _schedule_cache_key(group_id: int, start_date: datetime.date, end_date: datetime.date,
-                        sub_group_id: int | None = None, exam_only: bool | None = None) -> str:
+
+def _schedule_cache_key(
+    group_id: int,
+    start_date: datetime.date,
+    end_date: datetime.date,
+    sub_group_id: int | None = None,
+    exam_only: bool | None = None,
+) -> str:
     sub_value = sub_group_id if sub_group_id is not None else 0
     exam_value = 1 if exam_only else 0
     return f"schedule:{group_id}:{sub_value}:{start_date.isoformat()}:{end_date.isoformat()}:{exam_value}"
 
 
-def _build_groups_tree(groups_data: list[dict[str, Any]], faculties_data: list[dict[str, Any]],
-                       sub_groups_data: list[dict[str, Any]]) -> dict[str, Any]:
+def _build_groups_tree(
+    groups_data: list[dict[str, Any]], faculties_data: list[dict[str, Any]], sub_groups_data: list[dict[str, Any]]
+) -> dict[str, Any]:
     faculties_map = {}
     for item in faculties_data:
         raw_id = item.get("id")
@@ -228,10 +236,12 @@ def _build_groups_tree(groups_data: list[dict[str, Any]], faculties_data: list[d
                 except (TypeError, ValueError):
                     continue
                 detail = sub_group_details.get(sub_group_id, {})
-                sub_groups.append({
-                    "id": sub_group_id,
-                    "name": detail.get("name") or str(len(sub_groups) + 1),
-                })
+                sub_groups.append(
+                    {
+                        "id": sub_group_id,
+                        "name": detail.get("name", "").title() or f"Подгруппа {len(sub_groups) + 1}",
+                    }
+                )
             if sub_groups:
                 leaf["sub_groups"] = sub_groups
 
@@ -249,7 +259,11 @@ def _fetch_groups_tree() -> dict[str, Any] | None:
     faculties_data = request_json(FACULTIES_URL, context="faculties")
     sub_groups_data = request_json(SUB_GROUPS_URL, context="sub_groups")
 
-    if not isinstance(groups_data, list) or not isinstance(faculties_data, list) or not isinstance(sub_groups_data, list):
+    if (
+        not isinstance(groups_data, list)
+        or not isinstance(faculties_data, list)
+        or not isinstance(sub_groups_data, list)
+    ):
         return None
 
     groups_tree = _build_groups_tree(groups_data, faculties_data, sub_groups_data)
@@ -354,8 +368,13 @@ def get_group_sub_group_ids(group_id: int) -> list[int]:
     return sorted(set(sub_group_ids))
 
 
-def get_schedule(group_id: int, start_date: datetime.date, end_date: datetime.date,
-                 sub_group_id: int | None = None, exam_only: bool | None = None) -> Any | None:
+def get_schedule(
+    group_id: int,
+    start_date: datetime.date,
+    end_date: datetime.date,
+    sub_group_id: int | None = None,
+    exam_only: bool | None = None,
+) -> Any | None:
     params = {
         "group_id": group_id,
         "start_date": start_date,
@@ -383,8 +402,7 @@ def get_schedule(group_id: int, start_date: datetime.date, end_date: datetime.da
 
     if redis_client and isinstance(data, list):
         try:
-            redis_client.setex(cache_key, int(SCHEDULE_CACHE_TTL.total_seconds()),
-                               json.dumps(data, ensure_ascii=False))
+            redis_client.setex(cache_key, int(SCHEDULE_CACHE_TTL.total_seconds()), json.dumps(data, ensure_ascii=False))
         except Exception as exc:
             logging.warning("Failed to write schedule cache: %s", exc)
 
