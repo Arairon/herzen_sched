@@ -164,9 +164,6 @@ async def generate_schedule_message(schedule):
             ):
                 continue
 
-            if mod:
-                print(f"Mod for {name}: '{mod}'")
-
             # if class_url:
             #     time_line += f" <a href=\"{class_url}\">🔗 (курс)</a>"
 
