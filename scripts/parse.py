@@ -183,7 +183,7 @@ def _build_schedule(
                     and existing_lesson["name"] == lesson["name"]
                     and existing_lesson["type"] == lesson["type"]
                     and existing_lesson["room"] == lesson["room"]
-                    and existing_lesson["class_url"] == lesson["class_url"]
+                    # and existing_lesson["class_url"] == lesson["class_url"]
                 ),
                 None,
             )
