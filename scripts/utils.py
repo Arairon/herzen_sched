@@ -171,10 +171,18 @@ async def generate_schedule_message(schedule):
             msg_text += f"\n{time_line}\n{title}"
 
             if teacher:
-                teacher_line = teacher.strip()
+                if isinstance(teacher, list):
+                    teacher_line = ", ".join(
+                        teacher_item.strip()
+                        for teacher_item in teacher
+                        if isinstance(teacher_item, str) and teacher_item.strip()
+                    )
+                else:
+                    teacher_line = teacher.strip()
                 # if teacher_url:
                 #     teacher_line = f"{teacher_line} <a href=\"{teacher_url}\">🔗 (профиль)</a>"
-                msg_text += f"\n{teacher_line}"
+                if teacher_line:
+                    msg_text += f"\n{teacher_line}"
             if room:
                 msg_text += f"\n{room.strip()}"
             msg_text += "\n"

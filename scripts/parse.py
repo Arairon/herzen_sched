@@ -90,9 +90,9 @@ def _build_schedule(
     rooms: dict[int, dict[str, Any]],
     buildings: dict[int, dict[str, Any]],
     target_tz: datetime.tzinfo,
-) -> dict[str, list[dict[str, str]]]:
-    schedule: dict[str, list[dict[str, str]]] = {}
-    schedule_hashes: dict[str, list[str]] = {}
+) -> dict[str, list[dict[str, Any]]]:
+    schedule: dict[str, list[dict[str, Any]]] = {}
+    schedule_hashes: dict[str, list[int]] = {}
 
     def format_rank(rank: str) -> str:
         rank = (rank or "").strip()
@@ -170,6 +170,41 @@ def _build_schedule(
             continue
         schedule.setdefault(day_label, []).append(obj)
         schedule_hashes.setdefault(day_label, []).append(objHash)
+
+    for day in schedule.values():
+        merged_day: list[dict[str, Any]] = []
+        for lesson in day:
+            duplicate_lesson = next(
+                (
+                    existing_lesson
+                    for existing_lesson in merged_day
+                    if existing_lesson["time"] == lesson["time"]
+                    and existing_lesson["mod"] == lesson["mod"]
+                    and existing_lesson["name"] == lesson["name"]
+                    and existing_lesson["type"] == lesson["type"]
+                    and existing_lesson["room"] == lesson["room"]
+                    and existing_lesson["class_url"] == lesson["class_url"]
+                ),
+                None,
+            )
+
+            if duplicate_lesson is None:
+                lesson_copy = lesson.copy()
+                teacher_name = (lesson_copy.get("teacher") or "").strip()
+                lesson_copy["teacher"] = [teacher_name] if teacher_name else []
+                merged_day.append(lesson_copy)
+                continue
+
+            teacher_name = (lesson.get("teacher") or "").strip()
+            if not teacher_name:
+                continue
+
+            existing_teachers = duplicate_lesson.get("teacher") or []
+            if teacher_name not in existing_teachers:
+                existing_teachers.append(teacher_name)
+                duplicate_lesson["teacher"] = existing_teachers
+
+        day[:] = merged_day
 
     return schedule
 
